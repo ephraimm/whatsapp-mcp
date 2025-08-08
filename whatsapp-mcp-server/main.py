@@ -596,6 +596,7 @@ if __name__ == "__main__":
         # For SSE transport, specify port 3000 to avoid conflicts
         port = int(os.environ.get('MCP_PORT', 3000))
         print(f"SSE transport listening on port {port}")
-    
-    # Initialize and run the server
-    mcp.run(transport=transport_mode, host="127.0.0.1", port=port)
+        mcp.run(transport=transport_mode, host="127.0.0.1", port=port)
+    else:
+        # For stdio transport, don't specify host/port
+        mcp.run(transport=transport_mode)
