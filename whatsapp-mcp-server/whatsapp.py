@@ -264,12 +264,12 @@ def start_bridge_process() -> Tuple[bool, str]:
         env['GOPATH'] = env.get('GOPATH', os.path.expanduser('~/go'))
         # Get correct GOROOT from Go itself
         try:
-            goroot_result = subprocess.run([go_cmd, 'env', 'GOROOT'], capture_output=True, text=True, timeout=5)
-            if goroot_result.returncode == 0:
-                env['GOROOT'] = goroot_result.stdout.strip()
-            else:
-                env['GOROOT'] = env.get('GOROOT', '/usr/local/go')
-        except:
+            goroot_result = subprocess.run(
+                [go_cmd, 'env', 'GOROOT'], 
+                capture_output=True, text=True, timeout=5, check=True
+            )
+            env['GOROOT'] = goroot_result.stdout.strip()
+        except (subprocess.SubprocessError, FileNotFoundError):
             env['GOROOT'] = env.get('GOROOT', '/usr/local/go')
         
         # Start the process
