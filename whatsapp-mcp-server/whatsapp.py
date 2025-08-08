@@ -262,14 +262,22 @@ def start_bridge_process() -> Tuple[bool, str]:
         env = os.environ.copy()
         env['PATH'] = '/usr/local/go/bin:/opt/homebrew/bin:' + env.get('PATH', '')
         env['GOPATH'] = env.get('GOPATH', os.path.expanduser('~/go'))
-        env['GOROOT'] = env.get('GOROOT', '/usr/local/go')
+        # Get correct GOROOT from Go itself
+        try:
+            goroot_result = subprocess.run(
+                [go_cmd, 'env', 'GOROOT'], 
+                capture_output=True, text=True, timeout=5, check=True
+            )
+            env['GOROOT'] = goroot_result.stdout.strip()
+        except (subprocess.SubprocessError, FileNotFoundError):
+            env['GOROOT'] = env.get('GOROOT', '/usr/local/go')
         
         # Start the process
         BRIDGE_PROCESS = subprocess.Popen(
             [go_cmd, 'run', 'main.go'],
             cwd=bridge_path,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
             env=env
@@ -284,7 +292,21 @@ def start_bridge_process() -> Tuple[bool, str]:
         time.sleep(2)
         
         if BRIDGE_PROCESS.poll() is not None:
-            return False, f"Bridge process failed to start. Exit code: {BRIDGE_PROCESS.returncode}"
+            # Capture any error output
+            stderr_output = ""
+            stdout_output = ""
+            try:
+                stdout_output, stderr_output = BRIDGE_PROCESS.communicate(timeout=1)
+            except subprocess.TimeoutExpired:
+                pass
+            
+            error_msg = f"Bridge process failed to start. Exit code: {BRIDGE_PROCESS.returncode}"
+            if stderr_output:
+                error_msg += f"\nSTDERR: {stderr_output}"
+            if stdout_output:
+                error_msg += f"\nSTDOUT: {stdout_output}"
+            
+            return False, error_msg
         
         return True, "Bridge process started successfully"
         
